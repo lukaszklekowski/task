@@ -1,14 +1,27 @@
 from http import HTTPStatus
-
+from flask import request
 from connexion import NoContent
-
+import datetime
 from lib.models import Article, db
 
 
 def get(user):
-    articles = Article.query.filter(
-        Article.author_user_id == user['user_id']
-    ).all()
+    release_date = request.args.get('release_date')
+    try:
+        release_date = int(release_date)
+    except ValueError:
+        return {"message": "The release_date must be a integer."}, HTTPStatus.BAD_REQUEST
+    
+    if not release_date:
+        articles = Article.query.filter(
+            Article.author_user_id == user['user_id']
+        ).all()
+    else:
+        articles = Article.query.filter(
+            Article.author_user_id == user['user_id'],
+            Article.release_date >= datetime.date(release_date, 1, 1),
+            Article.release_date <= datetime.date(release_date, 12, 31)
+        ).all()
 
     return [
        {
@@ -18,7 +31,6 @@ def get(user):
        }
        for article in articles
     ], HTTPStatus.OK
-
 
 def post(user, body):
     db.session.add(Article(
